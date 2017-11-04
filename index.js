@@ -13,6 +13,7 @@ const PAGE = {
   MENU_BUTTON: 'h1 button .icon-menu',
   MENU: '.menuList2.menuList3',
   ICON_INPUT: '.menuList2.menuList3 .file input[type="file"]',
+  REMOVE_SET_BUTTON: '.menuList2.menuList3 li:last-child button',
   SELECT_ALL_BUTTON: 'button[ng-click="selectAllNone($index, true)"]',
   GENERATE_LINK: 'a[href="#/select/font"]',
   GLYPH_SET: '#glyphSet0',
@@ -26,6 +27,8 @@ const DEFAULT_OPTIONS = {
 const logger = (...args) => {
   console.log('[icomoon-cli]', ...args);
 };
+
+const sleep = time => new Promise(resolve => setTimeout(resolve, time));
 
 const waitVisible = (c, selector, timeout = DEFAULT_TIMEOUT) => new Promise((resolve, reject) => {
   let count = 0;
@@ -91,7 +94,7 @@ async function pipeline(options = {}) {
     await fs.remove(outputDir);
     await fs.ensureDir(outputDir);
     // download stage
-    const c = new Chromy({ visible: true });
+    const c = new Chromy();
     logger('Started a new chrome instance.');
     await c.goto('https://icomoon.io/app/#/select', {
       waitLoadEvent: false,
@@ -102,6 +105,9 @@ async function pipeline(options = {}) {
     });
     await waitVisible(c, PAGE.IMPORT_CONFIG_BUTTON);
     logger('Dashboard is visible, going to upload config file');
+    // remove init set
+    await c.click(PAGE.MENU_BUTTON);
+    await c.click(PAGE.REMOVE_SET_BUTTON);
     await c.setFile(PAGE.IMPORT_SELECTION_INPUT, absoluteSelectionPath);
     await waitVisible(c, PAGE.OVERLAY_CONFIRM);
     await c.click(PAGE.OVERLAY_CONFIRM);
@@ -142,7 +148,11 @@ async function pipeline(options = {}) {
           }
         }
       `;
+      // sleep to ensure indexedDB is ready
+      await sleep(2000);
       await c.evaluate(executeCode);
+      // sleep to ensure the code was executed
+      await sleep(1000);
     }
     // reload the page let icomoon read latest indexedDB data
     await c.send('Page.reload');
