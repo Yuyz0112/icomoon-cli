@@ -5,8 +5,9 @@ const pipeline = require('./index');
 
 const names = ['new1', 'new2'];
 
+console.log('============= Start test =============');
 pipeline({
-  icons: ['test-assets/全屏退出.svg', 'test-assets/最新消息组icon-01.svg'],
+  icons: ['test-assets/1.svg', 'test-assets/2.svg'],
   names,
   selectionPath: 'test-assets/selection.json',
   whenFinished (result) {
@@ -15,5 +16,6 @@ pipeline({
       newSelection.icons.slice(0, names.length).map(icon => icon.properties.name),
       names
     );
+    console.log('============= Assertion passed =============');
   }
 });

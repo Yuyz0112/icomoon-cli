@@ -1,0 +1,34 @@
+#!/usr/bin/env node
+const yargs = require('yargs');
+const pipeline = require('./index');
+
+const argv = yargs
+  .alias('h', 'help')
+  .option('s', {
+    alias : 'selection',
+    demand: true,
+    describe: 'path to icomoon selection file',
+  })
+  .option('i', {
+    alias: 'icons',
+    describe: 'paths to icons need to be imported, separated by comma',
+    default: '',
+  })
+  .option('n', {
+    alias: 'names',
+    describe: 'rename icons, separated by comma, matched by index',
+    default: '',
+  })
+  .option('o', {
+    alias: 'output',
+    default: './output',
+    describe: 'output directory',
+  })
+  .argv;
+
+pipeline({
+  selectionPath: argv.s,
+  icons: argv.i.split(','),
+  names: argv.n.split(','),
+  outputDir: argv.o,
+});

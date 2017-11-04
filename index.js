@@ -60,6 +60,10 @@ const checkDownload = dest => new Promise((resolve, reject) => {
   let timeCount = 0;
   const timer = setInterval(async () => {
     timeCount += interval;
+    const exist = await fs.exists(dest);
+    if (!exist) {
+      return;
+    }
     const stats = fs.statSync(dest);
     if (stats.size > 0 && stats.size === downloadSize) {
       clearInterval(timer);
