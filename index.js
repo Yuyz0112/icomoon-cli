@@ -3,7 +3,7 @@ const path = require('path');
 const Chromy = require('chromy');
 const extract = require('extract-zip');
 
-const DEFAULT_TIMEOUT = 30000;
+const DEFAULT_TIMEOUT = 60000;
 const DEFAULT_INTERVAL = 500;
 
 const PAGE = {
@@ -70,7 +70,7 @@ const checkDownload = dest => new Promise((resolve, reject) => {
   }, interval);
 });
 
-async function main(options = {}) {
+async function pipeline(options = {}) {
   try {
     const {
       icons,
@@ -91,12 +91,12 @@ async function main(options = {}) {
     await fs.remove(outputDir);
     await fs.ensureDir(outputDir);
     // download stage
-    const c = new Chromy();
+    const c = new Chromy({ visible: true });
     logger('Started a new chrome instance.');
     await c.goto('https://icomoon.io/app/#/select', {
       waitLoadEvent: false,
     });
-    c.send('Page.setDownloadBehavior', {
+    await c.send('Page.setDownloadBehavior', {
       behavior : 'allow',
       downloadPath: outputDir,
     });
@@ -115,15 +115,39 @@ async function main(options = {}) {
     await waitVisible(c, PAGE.GLYPH_SET);
     if (names.length) {
       logger('Changed names of icons');
+      // update indexedDB
       const executeCode = `
-        var icons = document.querySelectorAll('${PAGE.GLYPH_NAME}');
-        var names = JSON.parse('${JSON.stringify(names)}');
-        for (var i = 0; i < names.length; i++) {
-          icons[i].innerText = names[i];
+        const request = indexedDB.open('IDBWrapper-storage', 1);
+        request.onsuccess = function() {
+          const db = request.result;
+          const tx = db.transaction('storage', 'readwrite');
+          const store = tx.objectStore('storage');
+          const keys = store.getAllKeys();
+          keys.onsuccess = function() {
+            let timestamp;
+            keys.result.forEach(function(key) {
+              if (typeof key === 'number') {
+                timestamp = key;
+              }
+            });
+            const main = store.get(timestamp);
+            main.onsuccess = function() {
+              const data  = main.result;
+              const names = JSON.parse('${JSON.stringify(names)}');
+              for (let i = 0; i < names.length; i++) {
+                data.obj.iconSets[0].selection[i].name = names[i];
+              }
+              store.put(data);
+            }
+          }
         }
       `;
       await c.evaluate(executeCode);
     }
+    // reload the page let icomoon read latest indexedDB data
+    await c.send('Page.reload');
+    await c.waitLoadEvent();
+    await waitVisible(c, PAGE.DOWNLOAD_BUTTON);
     await c.click(PAGE.DOWNLOAD_BUTTON);
     logger('Started to download icomoon.zip');
     const zipPath = path.join(outputDir, 'icomoon.zip');
@@ -147,9 +171,4 @@ async function main(options = {}) {
   }
 }
 
-main({
-  icons: ['/Users/yanzhen/Downloads/全屏退出.svg', '/Users/yanzhen/Downloads/全屏退出.svg'],
-  names: ['new1', 'new2'],
-  selectionPath: '../../improve/wizard/src/style/icomoon/config.json',
-  outputDir: 'output',
-});
+module.exports = pipeline;
