@@ -26,7 +26,7 @@ Commands:
   -n, --names      rename icons, separated by comma, matched by index
   -o, --output     output directory
 
-Example Usage: node cli.js -i test-assets/1.svg,test-assets/2.svg -s test-assets/selection.json -n newname1,newname2 -o output
+Example Usage: icomoon-cli -i test-assets/1.svg,test-assets/2.svg -s test-assets/selection.json -n newname1,newname2 -o output
 ```
 
 ## programmatic usage

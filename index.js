@@ -99,7 +99,7 @@ async function pipeline(options = {}) {
     await fs.ensureDir(outputDir);
     // download stage
     const c = new Chromy();
-    logger('Started a new chrome instance.');
+    logger('Started a new chrome instance, going to load icomoon.io.');
     await c.goto('https://icomoon.io/app/#/select', {
       waitLoadEvent: false,
     });
