@@ -77,12 +77,38 @@ const checkDownload = dest => new Promise((resolve, reject) => {
   }, interval);
 });
 
+const checkDuplicateName = ({ selectionPath, icons, names }, forceOverride) => {
+  const iconNames = icons.map((icon, index) => {
+    if (names[index]) {
+      return names[index];
+    }
+    return path.basename(icon).replace(path.extname(icon), '');
+  });
+  const duplicates = [];
+  const selection = fs.readJSONSync(selectionPath);
+  selection.icons.forEach(({ properties }, index) => {
+    if (iconNames.includes(properties.name)) {
+      duplicates.push({ name: properties.name, index });
+    }
+  });
+  if (!duplicates.length) {
+    return;
+  }
+  if (forceOverride) {
+    selection.icons = selection.icons.filter((icon, index) => !duplicates.some(d => d.index === index));
+    fs.writeJSONSync(selectionPath, selection, { spaces: 2 });
+  } else {
+    throw new Error(`Found duplicate icon names: ${duplicates.map(d => d.name).join(',')}`);
+  }
+};
+
 async function pipeline(options = {}) {
   try {
     const {
       icons,
       names = [],
       selectionPath,
+      forceOverride = false,
       whenFinished,
     } = options;
     const outputDir = options.outputDir ? getAbsolutePath(options.outputDir) : DEFAULT_OPTIONS.outputDir;
@@ -95,6 +121,11 @@ async function pipeline(options = {}) {
       throw new Error('Please config a valid selection file path.');
     }
     let absoluteSelectionPath = getAbsolutePath(selectionPath);
+    checkDuplicateName({
+      selectionPath: absoluteSelectionPath,
+      icons,
+      names,
+    }, forceOverride);
     await fs.remove(outputDir);
     await fs.ensureDir(outputDir);
     // download stage

@@ -24,6 +24,11 @@ const argv = yargs
     default: './output',
     describe: 'output directory',
   })
+  .option('f', {
+    alias: 'force',
+    default: false,
+    describe: 'force override current icon when icon name duplicated',
+  })
   .argv;
 
 pipeline({
@@ -31,4 +36,5 @@ pipeline({
   icons: argv.i.split(','),
   names: argv.n.split(','),
   outputDir: argv.o,
+  forceOverride: argv.f,
 });

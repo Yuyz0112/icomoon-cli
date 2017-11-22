@@ -10,6 +10,7 @@ pipeline({
   icons: ['test-assets/1.svg', 'test-assets/2.svg'],
   names,
   selectionPath: 'test-assets/selection.json',
+  forceOverride: true,
   whenFinished (result) {
     const newSelection = JSON.parse(fs.readFileSync(path.resolve(result.outputDir, 'selection.json')));
     assert.deepEqual(
