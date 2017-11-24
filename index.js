@@ -115,6 +115,9 @@ async function pipeline(options = {}) {
     // prepare stage
     logger('Preparing...');
     if (!icons || !icons.length) {
+      if (whenFinished) {
+        whenFinished({ outputDir });
+      }
       return logger('No new icons found.');
     }
     if (!selectionPath) {
