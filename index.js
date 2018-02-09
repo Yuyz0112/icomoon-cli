@@ -10,6 +10,7 @@ const PAGE = {
   IMPORT_CONFIG_BUTTON: '.file.unit',
   IMPORT_SELECTION_INPUT: '.file.unit input[type="file"]',
   OVERLAY_CONFIRM: '.overlay button.mrl',
+  NEW_SET_BUTTON: '.menuList1 button',
   MENU_BUTTON: 'h1 button .icon-menu',
   MENU: '.menuList2.menuList3',
   ICON_INPUT: '.menuList2.menuList3 .file input[type="file"]',
@@ -132,7 +133,7 @@ async function pipeline(options = {}) {
     await fs.remove(outputDir);
     await fs.ensureDir(outputDir);
     // download stage
-    const c = new Chromy();
+    const c = new Chromy({visible: process.env.DEBUG});
     logger('Started a new chrome instance, going to load icomoon.io.');
     await c.goto('https://icomoon.io/app/#/select', {
       waitLoadEvent: false,
@@ -149,6 +150,16 @@ async function pipeline(options = {}) {
     await c.setFile(PAGE.IMPORT_SELECTION_INPUT, absoluteSelectionPath);
     await waitVisible(c, PAGE.OVERLAY_CONFIRM);
     await c.click(PAGE.OVERLAY_CONFIRM);
+    let selection = fs.readFileSync(absoluteSelectionPath, 'utf8');
+    try {
+      selection = JSON.parse(fs.readFileSync(absoluteSelectionPath, 'utf8'));
+    } catch (err) {
+      selection = {};
+    }
+    if (selection.icons.length === 0) {
+      logger('Selection icons is empty, going to create an empty set');
+      await c.click(PAGE.NEW_SET_BUTTON);
+    }
     logger('Uploaded config, going to upload new icon files');
     await c.click(PAGE.MENU_BUTTON);
     await c.setFile(PAGE.ICON_INPUT, icons.map(getAbsolutePath));
