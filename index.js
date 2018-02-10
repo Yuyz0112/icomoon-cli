@@ -14,6 +14,7 @@ const PAGE = {
   MENU_BUTTON: 'h1 button .icon-menu',
   MENU: '.menuList2.menuList3',
   ICON_INPUT: '.menuList2.menuList3 .file input[type="file"]',
+  FIRST_ICON_BOX: '#set0 .miBox:not(.mi-selected)',
   REMOVE_SET_BUTTON: '.menuList2.menuList3 li:last-child button',
   SELECT_ALL_BUTTON: 'button[ng-click="selectAllNone($index, true)"]',
   GENERATE_LINK: 'a[href="#/select/font"]',
@@ -111,6 +112,7 @@ async function pipeline(options = {}) {
       selectionPath,
       forceOverride = false,
       whenFinished,
+      visible = false,
     } = options;
     const outputDir = options.outputDir ? getAbsolutePath(options.outputDir) : DEFAULT_OPTIONS.outputDir;
     // prepare stage
@@ -133,7 +135,9 @@ async function pipeline(options = {}) {
     await fs.remove(outputDir);
     await fs.ensureDir(outputDir);
     // download stage
-    const c = new Chromy({visible: process.env.DEBUG});
+    const c = new Chromy({
+      visible,
+    });
     logger('Started a new chrome instance, going to load icomoon.io.');
     await c.goto('https://icomoon.io/app/#/select', {
       waitLoadEvent: false,
@@ -150,12 +154,7 @@ async function pipeline(options = {}) {
     await c.setFile(PAGE.IMPORT_SELECTION_INPUT, absoluteSelectionPath);
     await waitVisible(c, PAGE.OVERLAY_CONFIRM);
     await c.click(PAGE.OVERLAY_CONFIRM);
-    let selection = fs.readFileSync(absoluteSelectionPath, 'utf8');
-    try {
-      selection = JSON.parse(fs.readFileSync(absoluteSelectionPath, 'utf8'));
-    } catch (err) {
-      selection = {};
-    }
+    const selection = fs.readJSONSync(selectionPath);
     if (selection.icons.length === 0) {
       logger('Selection icons is empty, going to create an empty set');
       await c.click(PAGE.NEW_SET_BUTTON);
@@ -163,7 +162,7 @@ async function pipeline(options = {}) {
     logger('Uploaded config, going to upload new icon files');
     await c.click(PAGE.MENU_BUTTON);
     await c.setFile(PAGE.ICON_INPUT, icons.map(getAbsolutePath));
-    await waitVisible(c, '#set0 .miBox:not(.mi-selected)');
+    await waitVisible(c, PAGE.FIRST_ICON_BOX);
     await c.click(PAGE.SELECT_ALL_BUTTON);
     logger('Uploaded and selected all new icons');
     await c.click(PAGE.GENERATE_LINK);

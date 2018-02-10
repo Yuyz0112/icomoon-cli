@@ -26,6 +26,7 @@ Commands:
   -n, --names      rename icons, separated by comma, matched by index
   -o, --output     output directory
   -f, --force      force override current icon when icon name duplicated
+  -v, --visible    run a GUI chrome instead of headless mode
 
 Example Usage: icomoon-cli -i test-assets/1.svg,test-assets/2.svg -s test-assets/selection.json -n newname1,newname2 -o output
 ```
@@ -45,6 +46,7 @@ pipeline({
   selectionPath: 'test-assets/selection.json',
   outputDir: 'output',
   forceOverride: true,
+  // visible: true,
   whenFinished (result) {
     // you can get the absolute path of output directory via result.outputDir
   }

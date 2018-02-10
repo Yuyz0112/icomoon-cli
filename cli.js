@@ -29,6 +29,11 @@ const argv = yargs
     default: false,
     describe: 'force override current icon when icon name duplicated',
   })
+  .option('v', {
+    alias: 'visible',
+    default: false,
+    describe: 'run a GUI chrome instead of headless mode',
+  })
   .argv;
 
 pipeline({
@@ -37,4 +42,5 @@ pipeline({
   names: argv.n.split(','),
   outputDir: argv.o,
   forceOverride: argv.f,
+  visible: argv.visible,
 });
