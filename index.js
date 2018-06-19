@@ -207,8 +207,9 @@ async function pipeline(options = {}) {
     await c.waitLoadEvent();
     await waitVisible(c, PAGE.DOWNLOAD_BUTTON);
     await c.click(PAGE.DOWNLOAD_BUTTON);
-    logger('Started to download icomoon.zip');
-    const zipPath = path.join(outputDir, 'icomoon.zip');
+    const zipName = `${selection.preferences.fontPref.metadata.fontFamily}.zip`;
+    logger(`Started to download ${zipName}`);
+    const zipPath = path.join(outputDir, zipName);
     await checkDownload(zipPath);
     logger('Successfully downloaded, going to unzip it.');
     await c.close();
