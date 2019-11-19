@@ -143,7 +143,7 @@ async function pipeline(options = {}) {
       waitLoadEvent: false,
     });
     await c.send('Page.setDownloadBehavior', {
-      behavior : 'allow',
+      behavior: 'allow',
       downloadPath: outputDir,
     });
     await waitVisible(c, PAGE.IMPORT_CONFIG_BUTTON);
@@ -207,7 +207,10 @@ async function pipeline(options = {}) {
     await c.waitLoadEvent();
     await waitVisible(c, PAGE.DOWNLOAD_BUTTON);
     await c.click(PAGE.DOWNLOAD_BUTTON);
-    const zipName = `${selection.preferences.fontPref.metadata.fontFamily}.zip`;
+    const meta = selection.preferences.fontPref.metadata;
+    const zipName = meta.majorVersion
+      ? `${meta.fontFamily}-v${meta.majorVersion}.${meta.minorVersion || 0}.zip`
+      : `${meta.fontFamily}.zip`;
     logger(`Started to download ${zipName}`);
     const zipPath = path.join(outputDir, zipName);
     await checkDownload(zipPath);
