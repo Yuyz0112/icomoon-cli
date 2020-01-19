@@ -17,6 +17,9 @@ const PAGE = {
   FIRST_ICON_BOX: '#set0 .miBox:not(.mi-selected)',
   REMOVE_SET_BUTTON: '.menuList2.menuList3 li:last-child button',
   SELECT_ALL_BUTTON: 'button[ng-click="selectAllNone($index, true)"]',
+  REARRANGE_BUTTON: 'button[ng-click="showRearrange($index)"]',
+  REARRANGE_ORDER_BUTTON: '.clearfix.ng-pristine label:nth-child(2)',
+  CONFIRM_REARRANGE_BUTTON: '.overlay button.mtl',
   GENERATE_LINK: 'a[href="#/select/font"]',
   GLYPH_SET: '#glyphSet0',
   GLYPH_NAME: '.glyphName',
@@ -165,6 +168,13 @@ async function pipeline(options = {}) {
     await waitVisible(c, PAGE.FIRST_ICON_BOX);
     await c.click(PAGE.SELECT_ALL_BUTTON);
     logger('Uploaded and selected all new icons');
+    await c.click(PAGE.MENU_BUTTON);
+    await c.click(PAGE.REARRANGE_BUTTON);
+    await c.click(PAGE.REARRANGE_ORDER_BUTTON);
+    await waitVisible(c, PAGE.CONFIRM_REARRANGE_BUTTON);
+    await c.click(PAGE.CONFIRM_REARRANGE_BUTTON);
+    await c.click(PAGE.SELECT_ALL_BUTTON);
+    logger('List Rearranged');
     await c.click(PAGE.GENERATE_LINK);
     await waitVisible(c, PAGE.GLYPH_SET);
     if (names.length) {
@@ -202,10 +212,6 @@ async function pipeline(options = {}) {
       // sleep to ensure the code was executed
       await sleep(1000);
     }
-    // reload the page let icomoon read latest indexedDB data
-    await c.send('Page.reload');
-    await c.waitLoadEvent();
-    await waitVisible(c, PAGE.DOWNLOAD_BUTTON);
     await c.click(PAGE.DOWNLOAD_BUTTON);
     const meta = selection.preferences.fontPref.metadata;
     const zipName = meta.majorVersion
