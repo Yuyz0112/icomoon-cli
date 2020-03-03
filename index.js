@@ -51,6 +51,9 @@ const waitVisible = (c, selector, timeout = DEFAULT_TIMEOUT) => new Promise((res
 const getAbsolutePath = inputPath => {
   let absoluteSelectionPath = inputPath;
   if (!path.isAbsolute(inputPath)) {
+    if (!process.env.PWD) {
+      process.env.PWD = process.cwd();
+    }
     absoluteSelectionPath = path.resolve(process.env.PWD, inputPath);
   }
   return absoluteSelectionPath;
@@ -203,9 +206,6 @@ async function pipeline(options = {}) {
       await sleep(1000);
     }
     // reload the page let icomoon read latest indexedDB data
-    await c.send('Page.reload');
-    await c.waitLoadEvent();
-    await waitVisible(c, PAGE.DOWNLOAD_BUTTON);
     await c.click(PAGE.DOWNLOAD_BUTTON);
     const meta = selection.preferences.fontPref.metadata;
     const zipName = meta.majorVersion
