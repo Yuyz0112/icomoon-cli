@@ -206,9 +206,6 @@ async function pipeline(options = {}) {
       await sleep(1000);
     }
     // reload the page let icomoon read latest indexedDB data
-    await c.send('Page.reload');
-    await c.waitLoadEvent();
-    await waitVisible(c, PAGE.DOWNLOAD_BUTTON);
     await c.click(PAGE.DOWNLOAD_BUTTON);
     const meta = selection.preferences.fontPref.metadata;
     const zipName = meta.majorVersion
