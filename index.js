@@ -1,16 +1,16 @@
 const fs = require('fs-extra');
 const path = require('path');
-const Chromy = require('chromy');
 const extract = require('extract-zip');
+const puppeteer = require('puppeteer');
 
 const DEFAULT_TIMEOUT = 60000;
-const DEFAULT_INTERVAL = 500;
 
 const PAGE = {
   IMPORT_CONFIG_BUTTON: '.file.unit',
   IMPORT_SELECTION_INPUT: '.file.unit input[type="file"]',
   OVERLAY_CONFIRM: '.overlay button.mrl',
   NEW_SET_BUTTON: '.menuList1 button',
+  MAIN_MENU_BUTTON: '.bar-top button .icon-menu',
   MENU_BUTTON: 'h1 button .icon-menu',
   MENU: '.menuList2.menuList3',
   ICON_INPUT: '.menuList2.menuList3 .file input[type="file"]',
@@ -31,22 +31,6 @@ const logger = (...args) => {
 };
 
 const sleep = time => new Promise(resolve => setTimeout(resolve, time));
-
-const waitVisible = (c, selector, timeout = DEFAULT_TIMEOUT) => new Promise((resolve, reject) => {
-  let count = 0;
-  let isVisible = false;
-  const timer = setInterval(async () => {
-    isVisible = await c.visible(selector);
-    if (isVisible || count >= timeout) {
-      clearInterval(timer);
-      if (!isVisible) {
-        reject(`${selector} is not visible after ${timeout}ms.`);
-      }
-      resolve(true);
-    }
-    count += DEFAULT_INTERVAL;
-  }, DEFAULT_INTERVAL);
-});
 
 const getAbsolutePath = inputPath => {
   let absoluteSelectionPath = inputPath;
@@ -115,7 +99,7 @@ async function pipeline(options = {}) {
       selectionPath,
       forceOverride = false,
       whenFinished,
-      visible = false,
+      visible = false
     } = options;
     const outputDir = options.outputDir ? getAbsolutePath(options.outputDir) : DEFAULT_OPTIONS.outputDir;
     // prepare stage
@@ -137,43 +121,47 @@ async function pipeline(options = {}) {
     }, forceOverride);
     await fs.remove(outputDir);
     await fs.ensureDir(outputDir);
-    // download stage
-    const c = new Chromy({
-      visible,
-    });
+
+    const browser = await puppeteer.launch({ headless: !visible });
     logger('Started a new chrome instance, going to load icomoon.io.');
-    await c.goto('https://icomoon.io/app/#/select', {
-      waitLoadEvent: false,
-    });
-    await c.send('Page.setDownloadBehavior', {
+    const page = await (await browser).newPage();
+    await page._client.send('Page.setDownloadBehavior', {
       behavior: 'allow',
-      downloadPath: outputDir,
+      downloadPath: outputDir
     });
-    await waitVisible(c, PAGE.IMPORT_CONFIG_BUTTON);
+    await page.goto('https://icomoon.io/app/#/select');
+    await page.waitForSelector(PAGE.IMPORT_CONFIG_BUTTON);
     logger('Dashboard is visible, going to upload config file');
     // remove init set
-    await c.click(PAGE.MENU_BUTTON);
-    await c.click(PAGE.REMOVE_SET_BUTTON);
-    await c.setFile(PAGE.IMPORT_SELECTION_INPUT, absoluteSelectionPath);
-    await waitVisible(c, PAGE.OVERLAY_CONFIRM);
-    await c.click(PAGE.OVERLAY_CONFIRM);
+    await page.click(PAGE.MENU_BUTTON);
+    await page.click(PAGE.REMOVE_SET_BUTTON);
+
+    const importInput = await page.waitForSelector(PAGE.IMPORT_SELECTION_INPUT);
+    await importInput.uploadFile(absoluteSelectionPath);
+    await page.waitForSelector(PAGE.OVERLAY_CONFIRM, { visible: true });
+    await page.click(PAGE.OVERLAY_CONFIRM);
     const selection = fs.readJSONSync(selectionPath);
     if (selection.icons.length === 0) {
       logger('Selection icons is empty, going to create an empty set');
-      await c.click(PAGE.NEW_SET_BUTTON);
+      await page.click(PAGE.MAIN_MENU_BUTTON);
+      await page.waitForSelector(PAGE.NEW_SET_BUTTON, { visible: true });
+      await page.click(PAGE.NEW_SET_BUTTON);
     }
     logger('Uploaded config, going to upload new icon files');
-    await c.click(PAGE.MENU_BUTTON);
-    await c.setFile(PAGE.ICON_INPUT, icons.map(getAbsolutePath));
-    await waitVisible(c, PAGE.FIRST_ICON_BOX);
-    await c.click(PAGE.SELECT_ALL_BUTTON);
+    await page.click(PAGE.MENU_BUTTON);
+    const iconInput = await page.waitForSelector(PAGE.ICON_INPUT);
+    const iconPaths = icons.map(getAbsolutePath);
+    await iconInput.uploadFile(...iconPaths);
+    await page.waitForSelector(PAGE.FIRST_ICON_BOX);
+    await page.click(PAGE.SELECT_ALL_BUTTON);
     logger('Uploaded and selected all new icons');
-    await c.click(PAGE.GENERATE_LINK);
-    await waitVisible(c, PAGE.GLYPH_SET);
+    await page.click(PAGE.GENERATE_LINK);
+    await page.waitForSelector(PAGE.GLYPH_SET);
     if (names.length) {
       logger('Changed names of icons');
-      // update indexedDB
-      const executeCode = `
+      // sleep to ensure indexedDB is ready
+      await sleep(1000);
+      await page.evaluate(names => {
         const request = indexedDB.open('IDBWrapper-storage', 1);
         request.onsuccess = function() {
           const db = request.result;
@@ -189,24 +177,24 @@ async function pipeline(options = {}) {
             });
             const main = store.get(timestamp);
             main.onsuccess = function() {
-              const data  = main.result;
-              const names = JSON.parse('${JSON.stringify(names)}');
+              const data = main.result;
               for (let i = 0; i < names.length; i++) {
                 data.obj.iconSets[0].selection[i].name = names[i];
               }
               store.put(data);
-            }
-          }
-        }
-      `;
-      // sleep to ensure indexedDB is ready
-      await sleep(2000);
-      await c.evaluate(executeCode);
-      // sleep to ensure the code was executed
-      await sleep(1000);
+            };
+          };
+        };
+      }, names);
     }
+
+    // sleep to ensure the code was executed
+    await sleep(1000);
     // reload the page let icomoon read latest indexedDB data
-    await c.click(PAGE.DOWNLOAD_BUTTON);
+    await page.reload();
+
+    await page.waitForSelector(PAGE.DOWNLOAD_BUTTON);
+    await page.click(PAGE.DOWNLOAD_BUTTON);
     const meta = selection.preferences.fontPref.metadata;
     const zipName = meta.majorVersion
       ? `${meta.fontFamily}-v${meta.majorVersion}.${meta.minorVersion || 0}.zip`
@@ -215,9 +203,9 @@ async function pipeline(options = {}) {
     const zipPath = path.join(outputDir, zipName);
     await checkDownload(zipPath);
     logger('Successfully downloaded, going to unzip it.');
-    await c.close();
+    await page.close();
     // unzip stage
-    extract(zipPath, { dir: outputDir }, async (err) => {
+    extract(zipPath, { dir: outputDir }, async err => {
       if (err) {
         throw err;
       }
@@ -229,7 +217,6 @@ async function pipeline(options = {}) {
     });
   } catch (error) {
     console.error(error);
-    Chromy.cleanup();
   }
 }
 
