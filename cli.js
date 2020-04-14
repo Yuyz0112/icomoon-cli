@@ -1,6 +1,5 @@
-#!/usr/bin/env node
 const yargs = require('yargs');
-const pipeline = require('./index');
+const { pipeline, repository } = require('./index');
 
 const argv = yargs
   .alias('h', 'help')
@@ -8,6 +7,11 @@ const argv = yargs
     alias : 'selection',
     demand: true,
     describe: 'path to icomoon selection file',
+  })
+  .options('r', {
+    alias: 'repository',
+    default: '',
+    describe: 'path to repository folder. can not be combined with icon input'
   })
   .option('i', {
     alias: 'icons',
@@ -36,11 +40,21 @@ const argv = yargs
   })
   .argv;
 
-pipeline({
+let options = {
   selectionPath: argv.s,
   icons: argv.i.split(','),
   names: argv.n.split(','),
   outputDir: argv.o,
   forceOverride: argv.f,
   visible: argv.visible,
-});
+};
+
+if (argv.r) {
+  repository({
+    ...options,
+    repositoryPath: argv.r
+  }).then(() => process.exit(0), () => process.exit(1));
+} else {
+  pipeline(options).then(() => process.exit(0), () => process.exit(1));
+}
+
