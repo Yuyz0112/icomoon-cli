@@ -1,6 +1,6 @@
 {
   "name": "@ssfbank/icomoon-cli",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "",
   "main": "index.js",
   "bin": {
@@ -19,7 +19,7 @@
   "dependencies": {
     "extract-zip": "^2.0.0",
     "fs-extra": "^9.0.0",
-    "puppeteer": "^2.0.0",
+    "puppeteer": "2.0.0",
     "yargs": "^15.3.1"
   },
   "devDependencies": {
