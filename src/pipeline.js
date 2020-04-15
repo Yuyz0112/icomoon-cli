@@ -10,6 +10,7 @@ const PAGE = {
   IMPORT_CONFIG_BUTTON: '.file.unit',
   IMPORT_SELECTION_INPUT: '.file.unit input[type="file"]',
   OVERLAY_CONFIRM: '.overlay button.mrl',
+  OVERLAY_BUTTON: '.overlay button',
   NEW_SET_BUTTON: '.menuList1 button',
   MAIN_MENU_BUTTON: '.bar-top button .icon-menu',
   MENU_BUTTON: 'h1 button .icon-menu',
@@ -142,10 +143,17 @@ const pipeline = async (options = {}) => {
       const iconInput = await page.waitForSelector(PAGE.ICON_INPUT);
       const iconPaths = icons.map(getAbsolutePath);
       await iconInput.uploadFile(...iconPaths);
+      await page.waitFor(500);
+      try {
+        const handle = await page.waitForSelector(PAGE.OVERLAY_BUTTON, { visible: true, timeout: 2000 });
+        if (handle) {
+          await handle.click();
+        }
+      // eslint-disable-next-line no-empty
+      } catch (error) {}
+      
       await page.waitForSelector(PAGE.FIRST_ICON_BOX);
-      await page.waitFor(2000);
       await page.click(PAGE.MENU_BUTTON);
-      await page.waitFor(200);
       await page.waitForSelector(PAGE.SELECT_ALL_BUTTON, { visible: true });
       await page.click(PAGE.SELECT_ALL_BUTTON);
     }
