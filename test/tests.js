@@ -48,10 +48,11 @@ const tests = [
         names,
         selectionPath: selectionPath,
         forceOverride: true,
-        outputDir: 'test/staging/output',
+        outputDir: 'test/staging/output'
       });
     },
     assertion: (testData) => (result) => {
+      assert.strictEqual(result.didOutput, true);
       const { names } = testData;
       const newSelection = JSON.parse(fs.readFileSync(path.resolve(result.outputDir, 'selection.json')));
       assert.deepEqual(
@@ -78,6 +79,7 @@ const tests = [
       });
     },
     assertion: (testData) => result => {
+      assert.strictEqual(result.didOutput, true);
       const { names } = testData;
       const newSelection = JSON.parse(fs.readFileSync(path.resolve(result.outputDir, 'selection.json')));
       assert.deepEqual(
@@ -98,6 +100,7 @@ const tests = [
       });
     },
     assertion: () => result => {
+      assert.strictEqual(result.didOutput, true);
       const newSelection = JSON.parse(fs.readFileSync(path.resolve(result.outputDir, 'selection.json')));
       assert.deepEqual(
         newSelection.icons.map(icon => icon.properties.name),
@@ -119,6 +122,7 @@ const tests = [
       });
     },
     assertion: () => result => {
+      assert.strictEqual(result.didOutput, true);
       const newSelection = JSON.parse(fs.readFileSync(path.resolve(result.outputDir, 'selection.json')));
       assert.deepEqual(
         newSelection.icons.map(icon => icon.properties.name),
