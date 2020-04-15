@@ -55,7 +55,10 @@ pipeline({
   outputDir: 'output',
   forceOverride: true
 }).then(result => {
-    // you can get the absolute path of output directory via result.outputDir
+    // result: {
+    //  outputDir: '/home/blabla/project/output', // absolute path
+    //  didOutput: true // whether anything actually got output. errors get logged.
+    // }
 });
 ```
 
@@ -79,11 +82,15 @@ repository(
         outputDir: 'output',
         forceOverride: true
     }
-).then(_ => {
-    preProcessSCSS();
-    copyFiles();
-    cleanUp();
-}, _ => {
-    process.exit(1);
+).then(result => {
+    // result: {
+    //  outputDir: '/home/blabla/project/output',
+    //  didOutput: true
+    // }
+    if (result.didOutput) {
+        preProcessSCSS();
+        copyFiles();
+        cleanUp();
+    }
 });
 ```

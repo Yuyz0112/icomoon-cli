@@ -143,7 +143,10 @@ const pipeline = async (options = {}) => {
       const iconPaths = icons.map(getAbsolutePath);
       await iconInput.uploadFile(...iconPaths);
       await page.waitForSelector(PAGE.FIRST_ICON_BOX);
+      await page.waitFor(2000);
       await page.click(PAGE.MENU_BUTTON);
+      await page.waitFor(200);
+      await page.waitForSelector(PAGE.SELECT_ALL_BUTTON, { visible: true });
       await page.click(PAGE.SELECT_ALL_BUTTON);
     }
 
@@ -204,7 +207,7 @@ const pipeline = async (options = {}) => {
     return { outputDir, didOutput: true };
   } catch (error) {
     console.error(error);
-    return { outputDir, didOutput: false };
+    return { outputDir: '', didOutput: false };
   }
 };
 module.exports = pipeline;
