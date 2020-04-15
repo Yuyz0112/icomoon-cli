@@ -84,7 +84,7 @@ const repository = async (options = {}) => {
     return pipeline({ ...options, icons: newIcons });
   } catch (error) {
     console.error(error);
-    throw error;
+    return { outputDir: '', didOutput: false };
   }
 };
 

@@ -92,7 +92,7 @@ const pipeline = async (options = {}) => {
     logger('Preparing...');
     if (!repositoryPath && (!icons || !icons.length)) {
       logger('No new icons found.');
-      return { outputDir };
+      return { outputDir, didOutput: false };
     }
     if (!selectionPath) {
       throw new Error('Please config a valid selection file path.');
@@ -143,6 +143,7 @@ const pipeline = async (options = {}) => {
       const iconPaths = icons.map(getAbsolutePath);
       await iconInput.uploadFile(...iconPaths);
       await page.waitForSelector(PAGE.FIRST_ICON_BOX);
+      await page.click(PAGE.MENU_BUTTON);
       await page.click(PAGE.SELECT_ALL_BUTTON);
     }
 
@@ -200,10 +201,10 @@ const pipeline = async (options = {}) => {
     await extract(zipPath, { dir: outputDir });
     await fs.remove(zipPath);
     logger(`Finished. The output directory is ${outputDir}.`);
-    return { outputDir };
+    return { outputDir, didOutput: true };
   } catch (error) {
     console.error(error);
-    throw error;
+    return { outputDir, didOutput: false };
   }
 };
 module.exports = pipeline;
