@@ -16,6 +16,7 @@ const PAGE = {
   ICON_INPUT: '.menuList2.menuList3 .file input[type="file"]',
   FIRST_ICON_BOX: '#set0 .miBox:not(.mi-selected)',
   REMOVE_SET_BUTTON: '.menuList2.menuList3 li:last-child button',
+  OPEN_FEATURES_MENU: '#setH0 > button',
   SELECT_ALL_BUTTON: 'button[ng-click="selectAllNone($index, true)"]',
   GENERATE_LINK: 'a[href="#/select/font"]',
   GLYPH_SET: '#glyphSet0',
@@ -66,7 +67,7 @@ const checkDownload = dest => new Promise((resolve, reject) => {
   }, interval);
 });
 
-const checkDuplicateName = ({ selectionPath, icons, names }, forceOverride) => {
+const checkDuplicateName = ({selectionPath, icons, names}, forceOverride) => {
   const iconNames = icons.map((icon, index) => {
     if (names[index]) {
       return names[index];
@@ -75,9 +76,9 @@ const checkDuplicateName = ({ selectionPath, icons, names }, forceOverride) => {
   });
   const duplicates = [];
   const selection = fs.readJSONSync(selectionPath);
-  selection.icons.forEach(({ properties }, index) => {
+  selection.icons.forEach(({properties}, index) => {
     if (iconNames.includes(properties.name)) {
-      duplicates.push({ name: properties.name, index });
+      duplicates.push({name: properties.name, index});
     }
   });
   if (!duplicates.length) {
@@ -85,7 +86,7 @@ const checkDuplicateName = ({ selectionPath, icons, names }, forceOverride) => {
   }
   if (forceOverride) {
     selection.icons = selection.icons.filter((icon, index) => !duplicates.some(d => d.index === index));
-    fs.writeJSONSync(selectionPath, selection, { spaces: 2 });
+    fs.writeJSONSync(selectionPath, selection, {spaces: 2});
   } else {
     throw new Error(`Found duplicate icon names: ${duplicates.map(d => d.name).join(',')}`);
   }
@@ -106,7 +107,7 @@ async function pipeline(options = {}) {
     logger('Preparing...');
     if (!icons || !icons.length) {
       if (whenFinished) {
-        whenFinished({ outputDir });
+        whenFinished({outputDir});
       }
       return logger('No new icons found.');
     }
@@ -122,7 +123,7 @@ async function pipeline(options = {}) {
     await fs.remove(outputDir);
     await fs.ensureDir(outputDir);
 
-    const browser = await puppeteer.launch({ headless: !visible });
+    const browser = await puppeteer.launch({headless: !visible});
     logger('Started a new chrome instance, going to load icomoon.io.');
     const page = await (await browser).newPage();
     await page._client.send('Page.setDownloadBehavior', {
@@ -138,13 +139,13 @@ async function pipeline(options = {}) {
 
     const importInput = await page.waitForSelector(PAGE.IMPORT_SELECTION_INPUT);
     await importInput.uploadFile(absoluteSelectionPath);
-    await page.waitForSelector(PAGE.OVERLAY_CONFIRM, { visible: true });
+    await page.waitForSelector(PAGE.OVERLAY_CONFIRM, {visible: true});
     await page.click(PAGE.OVERLAY_CONFIRM);
     const selection = fs.readJSONSync(selectionPath);
     if (selection.icons.length === 0) {
       logger('Selection icons is empty, going to create an empty set');
       await page.click(PAGE.MAIN_MENU_BUTTON);
-      await page.waitForSelector(PAGE.NEW_SET_BUTTON, { visible: true });
+      await page.waitForSelector(PAGE.NEW_SET_BUTTON, {visible: true});
       await page.click(PAGE.NEW_SET_BUTTON);
     }
     logger('Uploaded config, going to upload new icon files');
@@ -153,6 +154,9 @@ async function pipeline(options = {}) {
     const iconPaths = icons.map(getAbsolutePath);
     await iconInput.uploadFile(...iconPaths);
     await page.waitForSelector(PAGE.FIRST_ICON_BOX);
+    await sleep(1000);
+    await page.click(PAGE.OPEN_FEATURES_MENU);
+    await sleep(1000);
     await page.click(PAGE.SELECT_ALL_BUTTON);
     logger('Uploaded and selected all new icons');
     await page.click(PAGE.GENERATE_LINK);
@@ -163,20 +167,20 @@ async function pipeline(options = {}) {
       await sleep(1000);
       await page.evaluate(names => {
         const request = indexedDB.open('IDBWrapper-storage', 1);
-        request.onsuccess = function() {
+        request.onsuccess = function () {
           const db = request.result;
           const tx = db.transaction('storage', 'readwrite');
           const store = tx.objectStore('storage');
           const keys = store.getAllKeys();
-          keys.onsuccess = function() {
+          keys.onsuccess = function () {
             let timestamp;
-            keys.result.forEach(function(key) {
+            keys.result.forEach(function (key) {
               if (typeof key === 'number') {
                 timestamp = key;
               }
             });
             const main = store.get(timestamp);
-            main.onsuccess = function() {
+            main.onsuccess = function () {
               const data = main.result;
               for (let i = 0; i < names.length; i++) {
                 data.obj.iconSets[0].selection[i].name = names[i];
@@ -205,16 +209,19 @@ async function pipeline(options = {}) {
     logger('Successfully downloaded, going to unzip it.');
     await page.close();
     // unzip stage
-    extract(zipPath, { dir: outputDir }, async err => {
+    extract(zipPath, {dir: outputDir}, async err => {
       if (err) {
         throw err;
       }
       await fs.remove(zipPath);
       logger(`Finished. The output directory is ${outputDir}.`);
       if (whenFinished) {
-        whenFinished({ outputDir });
+        whenFinished({outputDir});
       }
     });
+
+    await browser.close();
+
   } catch (error) {
     console.error(error);
   }
