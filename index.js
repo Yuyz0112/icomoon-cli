@@ -16,6 +16,7 @@ const PAGE = {
   ICON_INPUT: '.menuList2.menuList3 .file input[type="file"]',
   FIRST_ICON_BOX: '#set0 .miBox:not(.mi-selected)',
   REMOVE_SET_BUTTON: '.menuList2.menuList3 li:last-child button',
+  OPEN_FEATURES_MENU: '#setH0 > button',
   SELECT_ALL_BUTTON: 'button[ng-click="selectAllNone($index, true)"]',
   GENERATE_LINK: 'a[href="#/select/font"]',
   GLYPH_SET: '#glyphSet0',
@@ -91,7 +92,7 @@ const checkDuplicateName = ({ selectionPath, icons, names }, forceOverride) => {
   }
 };
 
-async function pipeline(options = {}) {
+const pipeline = async (options = {})=> {
   try {
     const {
       icons,
@@ -153,7 +154,14 @@ async function pipeline(options = {}) {
     const iconPaths = icons.map(getAbsolutePath);
     await iconInput.uploadFile(...iconPaths);
     await page.waitForSelector(PAGE.FIRST_ICON_BOX);
-    await page.click(PAGE.SELECT_ALL_BUTTON);
+
+    // neccesarry in some scenarios
+    try {
+      await page.click(PAGE.SELECT_ALL_BUTTON);
+    } catch (e) {
+
+    }
+
     logger('Uploaded and selected all new icons');
     await page.click(PAGE.GENERATE_LINK);
     await page.waitForSelector(PAGE.GLYPH_SET);
@@ -163,20 +171,20 @@ async function pipeline(options = {}) {
       await sleep(1000);
       await page.evaluate(names => {
         const request = indexedDB.open('IDBWrapper-storage', 1);
-        request.onsuccess = function() {
+        request.onsuccess = () =>  {
           const db = request.result;
           const tx = db.transaction('storage', 'readwrite');
           const store = tx.objectStore('storage');
           const keys = store.getAllKeys();
-          keys.onsuccess = function() {
+          keys.onsuccess = () =>  {
             let timestamp;
-            keys.result.forEach(function(key) {
+            keys.result.forEach((key) => {
               if (typeof key === 'number') {
                 timestamp = key;
               }
             });
             const main = store.get(timestamp);
-            main.onsuccess = function() {
+            main.onsuccess = () =>  {
               const data = main.result;
               for (let i = 0; i < names.length; i++) {
                 data.obj.iconSets[0].selection[i].name = names[i];
@@ -205,7 +213,7 @@ async function pipeline(options = {}) {
     logger('Successfully downloaded, going to unzip it.');
     await page.close();
     // unzip stage
-    extract(zipPath, { dir: outputDir }, async err => {
+    extract(zipPath, {dir: outputDir}, async err => {
       if (err) {
         throw err;
       }
@@ -215,9 +223,12 @@ async function pipeline(options = {}) {
         whenFinished({ outputDir });
       }
     });
+
+    await browser.close();
+
   } catch (error) {
     console.error(error);
   }
-}
+};
 
 module.exports = pipeline;
