@@ -38,8 +38,8 @@ const argv = yargs
 
 pipeline({
   selectionPath: argv.s,
-  icons: argv.i.split(','),
-  names: argv.n.split(','),
+  icons: argv.i.toString().includes(',') ? argv.i.split(',') : [argv.i],
+  names: argv.n.toString().includes(',') ? argv.n.split(',') : [argv.n],
   outputDir: argv.o,
   forceOverride: argv.f,
   visible: argv.visible,
